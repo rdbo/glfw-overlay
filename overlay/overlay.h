@@ -4,10 +4,20 @@
 #include <X11/Xlib.h>
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <unistd.h>
 
-int enumerate_windows(int (*callback)(Window window, char *window_name, pid_t pid));
-int create_overlay(Window window);
+struct window_info {
+	int x;
+	int y;
+	unsigned int width;
+	unsigned int height;
+	unsigned int border;
+	unsigned int depth;
+};
+
+int enumerate_windows(Display *display, int (*callback)(Window window, char *window_name, pid_t pid, void *arg), void *arg);
+Display *init_overlay(void);
+void shutdown_overlay(Display *display);
+int run_overlay(Display *display, Window window, int (*main_loop_callback)(struct window_info *winfo, void *arg), void *arg);
 
 #endif
