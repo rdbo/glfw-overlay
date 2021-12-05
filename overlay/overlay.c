@@ -5,59 +5,52 @@
 int enumerate_windows(Display *display, int (*callback)(Window window, char *window_name, pid_t pid, void *arg), void *arg)
 {
 	Window root_window;
+	Window *window_list;
 	Atom property;
-	Atom actual_type;
-	int actual_format;
-	unsigned long nitems;
-	unsigned long bytes_after;
-	unsigned char *data;
-	int ret;
+	unsigned int window_count;
+	unsigned int i;
+	char *window_name;
+	unsigned char *pid_data;
+	int check;
+	/* Variables to pass in X functions (unused otherwise) */
+	Window window_tmp;
+	Atom atom_tmp;
+	unsigned long ul_tmp;
+	int i_tmp;
 
 	root_window = RootWindow(display, DefaultScreen(display));
-	property = XInternAtom(display, "_NET_CLIENT_LIST", True); /* Window List Property */
+	if (XQueryTree(display, root_window, &window_tmp, &window_tmp, &window_list, &window_count) < Success)
+		return -1;
+	
+	property = XInternAtom(display, "_NET_WM_PID", True); /* Window PID property */
 
-	ret = XGetWindowProperty(
-		display, root_window, property, 0, BUFSIZ, False,
-		AnyPropertyType, &actual_type, &actual_format, &nitems,
-		&bytes_after, &data
-	);
+	for (i = 0; i < window_count; ++i) {
+		window_name = (char *)NULL;
+		pid_data = (unsigned char *)NULL;
 
-	if (ret >= Success) {
-		Window *window_list = (Window *)data;
-		unsigned long i;
-		char *window_name;
-		unsigned long tmp;
-		pid_t *pid_list;
+		check = XGetWindowProperty(
+			display, window_list[i], property, 0, BUFSIZ,
+			False, AnyPropertyType, &atom_tmp,
+			&i_tmp, &ul_tmp, &ul_tmp, &pid_data
+		);
 
-		property = XInternAtom(display, "_NET_WM_PID", True); /* Window PID Property */
+		check = XFetchName(display, window_list[i], &window_name);
 
-		for (i = 0; i < nitems; ++i) {
-			XGetWindowProperty(
-				display, window_list[i], property, 0, BUFSIZ,
-				False, AnyPropertyType, &actual_type,
-				&actual_format, &tmp, &tmp, &data
-			);
+		if (check >= Success && window_name && pid_data)
+			check = callback(window_list[i], window_name, *(pid_t *)pid_data, arg);
+		else
+			check = 0;
 
-			pid_list = (pid_t *)data;
-			window_name = (char *)NULL;
-			ret = XFetchName(display, window_list[i], &window_name);
+		XFree(pid_data);
+		XFree(window_name);
 
-			if (ret >= Success && window_name)
-				ret = callback(window_list[i], window_name, pid_list[0], arg);
-
-			XFree(window_name);
-			XFree(pid_list);
-
-			if (ret)
-				break;
-		}
-
-		XFree(window_list);
-
-		return 0;
+		if (check)
+			break;
 	}
 
-	return -1;
+	XFree(window_list);
+
+	return 0;
 }
 
 Display *init_overlay(void)
