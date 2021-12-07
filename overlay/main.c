@@ -26,6 +26,8 @@ int window_callback(Window window, char *window_name, pid_t pid, void *arg)
 		printf("====================\n");
 		run_overlay((Display *)arg, window, render_callback, NULL);
 		return -1;
+	} else if (!strcmp(window_name, "steam")) {
+		enumerate_windows((Display *)arg, window_callback, arg);
 	}
 
 	return 0;

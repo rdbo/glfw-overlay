@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int enumerate_windows(Display *display, int (*callback)(Window window, char *window_name, pid_t pid, void *arg), void *arg)
+static int enum_check = 0;
+
+int _enumerate_windows(Display *display, Window root_window, int (*callback)(Window window, char *window_name, pid_t pid, void *arg), void *arg)
 {
-	Window root_window;
 	Window *window_list;
 	Atom property;
 	unsigned int window_count;
@@ -18,7 +19,9 @@ int enumerate_windows(Display *display, int (*callback)(Window window, char *win
 	unsigned long ul_tmp;
 	int i_tmp;
 
-	root_window = RootWindow(display, DefaultScreen(display));
+	if (enum_check)
+		return enum_check;
+
 	if (XQueryTree(display, root_window, &window_tmp, &window_tmp, &window_list, &window_count) < Success)
 		return -1;
 	
@@ -28,7 +31,7 @@ int enumerate_windows(Display *display, int (*callback)(Window window, char *win
 		window_name = (char *)NULL;
 		pid_data = (unsigned char *)NULL;
 
-		check = XGetWindowProperty(
+		XGetWindowProperty(
 			display, window_list[i], property, 0, BUFSIZ,
 			False, AnyPropertyType, &atom_tmp,
 			&i_tmp, &ul_tmp, &ul_tmp, &pid_data
@@ -37,19 +40,29 @@ int enumerate_windows(Display *display, int (*callback)(Window window, char *win
 		check = XFetchName(display, window_list[i], &window_name);
 
 		if (check >= Success && window_name && pid_data)
-			check = callback(window_list[i], window_name, *(pid_t *)pid_data, arg);
-		else
-			check = 0;
+			enum_check = callback(window_list[i], window_name, *(pid_t *)pid_data, arg);
 
 		XFree(pid_data);
 		XFree(window_name);
 
-		if (check)
+		if (enum_check)
 			break;
+		
+		enum_check = _enumerate_windows(display, window_list[i], callback, arg);
 	}
 
 	XFree(window_list);
 
+	return enum_check;
+}
+
+int enumerate_windows(Display *display, int (*callback)(Window window, char *window_name, pid_t pid, void *arg), void *arg)
+{
+	Window root_window;
+
+	root_window = RootWindow(display, DefaultScreen(display));
+	_enumerate_windows(display, root_window, callback, arg);
+	enum_check = 0;
 	return 0;
 }
 
