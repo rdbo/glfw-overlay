@@ -122,11 +122,16 @@ int run_overlay(Display *display, Window window, int (*main_loop_callback)(struc
 
 	glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+	/*
+	glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+	glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
+	*/
 
 	glfw_window = glfwCreateWindow(winfo.width, winfo.height, "Overlay", NULL, NULL);
+
 	glfwSetWindowAttrib(glfw_window, GLFW_DECORATED, GLFW_FALSE);
+	glfwSetWindowAttrib(glfw_window, GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
 
 	glfwMakeContextCurrent(glfw_window);
 	glfwShowWindow(glfw_window);
